@@ -1,6 +1,7 @@
 import * as fs from "https://deno.land/std@0.167.0/fs/mod.ts";
 import * as path from "https://deno.land/std@0.167.0/path/mod.ts";
 import {PATH, TEMP} from "./constants.ts";
+import exif from "./exif.ts";
 
 const EXPORTS_PATH = path.join(TEMP, "Lightroom");
 
@@ -40,7 +41,9 @@ export default async function moveLightroomExports() {
       continue;
     }
 
-    const destination_path = path.join(PATH, destination_directory, "Canon Rebel T7", "1. RAW");
+    const {model} = await exif(cr2_path);
+
+    const destination_path = path.join(PATH, destination_directory, model, "1. RAW");
     if (!destination_path) {
       console.log(`No destination path found for ${entry.name}`);
       continue;
