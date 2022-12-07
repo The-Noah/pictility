@@ -1,8 +1,8 @@
 import * as fs from "https://deno.land/std@0.167.0/fs/mod.ts";
 import * as path from "https://deno.land/std@0.167.0/path/mod.ts";
-import {PATH} from "./constants.ts";
+import {PATH, TEMP} from "./constants.ts";
 
-const EXPORTS_PATH = "C:\\Users\\noah\\AppData\\Local\\Temp\\Lightroom";
+const EXPORTS_PATH = path.join(TEMP, "Lightroom");
 
 export default async function moveLightroomExports() {
   console.log("Moving Lightroom exports...");
