@@ -9,6 +9,11 @@ export default async function moveLightroomExports() {
   console.log("Moving Lightroom exports...");
   const start = Date.now();
 
+  if (!(await fs.exists(EXPORTS_PATH))) {
+    console.log("No Lightroom exports found");
+    return;
+  }
+
   const destination_directories: string[] = [];
   for await (const entry of await Deno.readDir(PATH)) {
     if (!entry.isDirectory) {
