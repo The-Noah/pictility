@@ -40,6 +40,11 @@ export default async function importFiles() {
       const {model} = await exif(entry.path);
 
       const date = (await Deno.stat(entry.path)).mtime;
+      if (!date) {
+        console.log(`Failed to get date for ${entry.name}`);
+        continue;
+      }
+
       const destination = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
       const destination_directory = path.join(PATH, destination, model);
 
