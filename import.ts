@@ -18,6 +18,15 @@ export default async function importFiles() {
       .filter((drive) => drive !== "C")
   );
 
+  const destination_directories: string[] = [];
+  for await (const entry of await Deno.readDir(PATH)) {
+    if (!entry.isDirectory) {
+      continue;
+    }
+
+    destination_directories.push(entry.name);
+  }
+
   let count = 0;
   for (const drive of DRIVES) {
     const drive_path = path.join(`${drive}:`, "DCIM");
@@ -33,6 +42,56 @@ export default async function importFiles() {
 
       const file_extension = path.extname(entry.path).toUpperCase();
 
+      if (file_extension === ".MOV") {
+        const date = (await Deno.stat(entry.path)).mtime;
+
+        if (!date) {
+          console.log(`Failed to get date for ${entry.name}`);
+          continue;
+        }
+
+        const destination = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+        const destination_directory = path.join(PATH, destination_directories.find((dir) => dir.startsWith(destination)) ?? destination, "Video");
+
+        // create directory structure
+        await fs.ensureDir(destination_directory);
+
+        const destination_path = path.join(destination_directory, path.basename(entry.path));
+
+        if (await fs.exists(destination_path)) {
+          console.log(`File already exists: ${entry.name}`);
+          continue;
+        }
+
+        console.log(`Moving ${entry.name} to ${path.basename(path.join(destination_directory, ".."))}...`);
+
+        await fs.copy(entry.path, destination_path);
+
+        // veriy file was copied
+        if (!(await fs.exists(destination_path))) {
+          console.log(`Failed to copy ${entry.name} to ${path.basename(path.join(destination_directory, ".."))}`);
+          continue;
+        }
+
+        // verify the sha256 hash of the original and copied file are the same
+        const original_hash = await getFileHash(entry.path);
+        const copied_hash = await getFileHash(destination_path);
+
+        if (original_hash !== copied_hash) {
+          console.log(`Failed to copy ${entry.name} to ${path.basename(path.join(destination_directory, ".."))}: hash mismatch`);
+          await Deno.remove(destination_path);
+
+          continue;
+        }
+
+        // delete original file
+        await Deno.remove(entry.path);
+
+        count++;
+
+        continue;
+      }
+
       if (![".JPG", ".CR2"].includes(file_extension)) {
         continue;
       }
@@ -46,7 +105,7 @@ export default async function importFiles() {
       }
 
       const destination = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
-      const destination_directory = path.join(PATH, destination, model);
+      const destination_directory = path.join(PATH, destination_directories.find((dir) => dir.startsWith(destination)) ?? destination, model);
 
       // create directory structure
       await fs.ensureDir(destination_directory);
@@ -61,13 +120,13 @@ export default async function importFiles() {
         continue;
       }
 
-      console.log(`Moving ${entry.name} to ${destination}...`);
+      console.log(`Moving ${entry.name} to ${path.basename(path.join(destination_directory, ".."))}...`);
 
       await fs.copy(entry.path, destination_path);
 
       // veriy file was copied
       if (!(await fs.exists(destination_path))) {
-        console.log(`Failed to copy ${entry.name} to ${destination}`);
+        console.log(`Failed to copy ${entry.name} to ${path.basename(path.join(destination_directory, ".."))}`);
         continue;
       }
 
@@ -76,7 +135,7 @@ export default async function importFiles() {
       const copied_hash = await getFileHash(destination_path);
 
       if (original_hash !== copied_hash) {
-        console.log(`Failed to copy ${entry.name} to ${destination}: hash mismatch`);
+        console.log(`Failed to copy ${entry.name} to ${path.basename(path.join(destination_directory, ".."))}: hash mismatch`);
         await Deno.remove(destination_path);
 
         continue;
