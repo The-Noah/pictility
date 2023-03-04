@@ -5,5 +5,6 @@ export default async function exif(path: string) {
 
   return {
     model: exif.Model.replace("Canon EOS", "Canon"),
+    ctime: exif.CreateDate,
   };
 }

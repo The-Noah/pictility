@@ -30,7 +30,8 @@ export default async function moveLightroomExports() {
     }
 
     const cr2_path = path.join(EXPORTS_PATH, entry.name);
-    const date = (await Deno.stat(cr2_path)).mtime;
+
+    const {model, ctime: date} = await exif(cr2_path);
 
     if (!date) {
       console.log(`Could not find date for ${entry.name}`);
@@ -45,8 +46,6 @@ export default async function moveLightroomExports() {
       console.log(`No destination directory found for ${entry.name}`);
       continue;
     }
-
-    const {model} = await exif(cr2_path);
 
     const destination_path = path.join(PATH, destination_directory, model, "1. RAW");
     if (!destination_path) {
